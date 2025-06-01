@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>בקשה לצו מעצר</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    function addOffenseField() {
+      const container = document.getElementById("offense-list");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "תאר את העבירה...";
+      input.className = "offense-input";
+      container.appendChild(input);
+    }
+
+    function removeOffenseField() {
+      const container = document.getElementById("offense-list");
+      if (container.children.length > 1) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    async function generatePDF() {
+      const element = document.getElementById("pdf-content");
+      const officerName = document.getElementById("officer-name").value;
+      const rank = document.getElementById("rank").value;
+      const idNumber = document.getElementById("id-number").value;
+      const suspectName = document.getElementById("suspect-name").value;
+      const suspectAddress = document.getElementById("suspect-address").value;
+      const background = document.getElementById("background").value;
+      const evidence = document.getElementById("evidence").value;
+
+      document.getElementById("display-officer-name").innerText = officerName;
+      document.getElementById("display-rank").innerText = rank;
+      document.getElementById("display-id-number").innerText = idNumber;
+      document.getElementById("display-suspect-name").innerText = suspectName;
+      document.getElementById("display-suspect-address").innerText = suspectAddress;
+      document.getElementById("display-background").innerText = background;
+      document.getElementById("display-evidence").innerText = evidence;
+
+      const offenses = document.querySelectorAll(".offense-input");
+      const offenseText = Array.from(offenses).map(x => `- ${x.value}`).join("\n");
+      document.getElementById("display-offenses").innerText = offenseText;
+
+      document.getElementById("pdf-content").style.display = 'block';
+
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("בקשה_לצו_מעצר.pdf");
+
+      document.getElementById("pdf-content").style.display = 'none';
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew&display=swap');
+    body {
+      direction: rtl;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      background: linear-gradient(to right, #e0f0ff, #ffffff);
+      margin: 0;
+      padding: 2rem;
+      color: #003366;
+    }
+    h1 {
+      text-align: center;
+      color: #002b80;
+    }
+    .pdf-box {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      font-size: 1.2rem;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    button {
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #0055cc;
+      color: white;
+      transition: background-color 0.3s ease;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+    }
+    button:hover {
+      background-color: #003f99;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-size: 1rem;
+    }
+    .offense-input {
+      display: block;
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-size: 1rem;
+    }
+    #pdf-content {
+      display: none;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>בקשה לצו מעצר</h1>
+  <div class="pdf-box">
+    <label>שם מגיש הבקשה:</label>
+    <input type="text" id="officer-name">
+    <label>דרגה:</label>
+    <input type="text" id="rank">
+    <label>מספר אישי:</label>
+    <input type="text" id="id-number">
+    <label>שם החשוד:</label>
+    <input type="text" id="suspect-name">
+    <label>כתובת:</label>
+    <input type="text" id="suspect-address">
+
+    <label>עבירות שבוצעו:</label>
+    <div id="offense-list">
+      <input type="text" class="offense-input" placeholder="תאר את העבירה...">
+    </div>
+    <div class="btn-group">
+      <button type="button" onclick="addOffenseField()">➕ הוסף עבירה</button>
+      <button type="button" onclick="removeOffenseField()">➖ הסר עבירה</button>
+    </div>
+
+    <label>רקע:</label>
+    <textarea id="background"></textarea>
+    <label>ראיות:</label>
+    <textarea id="evidence"></textarea>
+  </div>
+
+  <div class="pdf-box" id="pdf-content">
+    <h2>📝 בקשה לצו מעצר</h2>
+    <p><strong>שם מגיש הבקשה:</strong> <span id="display-officer-name"></span><br>
+    <strong>דרגה:</strong> <span id="display-rank"></span><br>
+    <strong>מספר אישי:</strong> <span id="display-id-number"></span></p>
+
+    <p><strong>שם החשוד:</strong> <span id="display-suspect-name"></span><br>
+    <strong>כתובת:</strong> <span id="display-suspect-address"></span></p>
+
+    <p><strong>עבירות שבוצעו:</strong><br>
+    <pre id="display-offenses"></pre></p>
+
+    <p><strong>רקע:</strong><br>
+    <span id="display-background"></span></p>
+
+    <p><strong>ראיות:</strong><br>
+    <span id="display-evidence"></span></p>
+  </div>
+
+  <div class="btn-group">
+    <button onclick="generatePDF()">📄 צור PDF</button>
+  </div>
+</body>
+</html>
