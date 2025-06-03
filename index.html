@@ -24,39 +24,70 @@
 
     async function generatePDF() {
       const element = document.getElementById("pdf-content");
-      const officerName = document.getElementById("officer-name").value;
-      const rank = document.getElementById("rank").value;
-      const idNumber = document.getElementById("id-number").value;
-      const suspectName = document.getElementById("suspect-name").value;
-      const suspectAddress = document.getElementById("suspect-address").value;
-      const background = document.getElementById("background").value;
-      const evidence = document.getElementById("evidence").value;
 
-      document.getElementById("display-officer-name").innerText = officerName;
-      document.getElementById("display-rank").innerText = rank;
-      document.getElementById("display-id-number").innerText = idNumber;
-      document.getElementById("display-suspect-name").innerText = suspectName;
-      document.getElementById("display-suspect-address").innerText = suspectAddress;
-      document.getElementById("display-background").innerText = background;
-      document.getElementById("display-evidence").innerText = evidence;
+      document.getElementById("display-officer-name").innerText = document.getElementById("officer-name").value;
+      document.getElementById("display-rank").innerText = document.getElementById("rank").value;
+      document.getElementById("display-id-number").innerText = document.getElementById("id-number").value;
+      document.getElementById("display-suspect-name").innerText = document.getElementById("suspect-name").value;
+      document.getElementById("display-suspect-address").innerText = document.getElementById("suspect-address").value;
+      document.getElementById("display-background").innerText = document.getElementById("background").value;
+      document.getElementById("display-evidence").innerText = document.getElementById("evidence").value;
 
       const offenses = document.querySelectorAll(".offense-input");
       const offenseText = Array.from(offenses).map(x => `- ${x.value}`).join("\n");
       document.getElementById("display-offenses").innerText = offenseText;
 
-      document.getElementById("pdf-content").style.display = 'block';
+      element.style.display = 'block';
 
       const canvas = await html2canvas(element, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL("image/jpeg", 0.9);
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save("בקשה_לצו_מעצר.pdf");
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
 
-      document.getElementById("pdf-content").style.display = 'none';
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      let pageNumber = 1;
+
+      pdf.addImage(imgData, 'JPEG', 0, 10, pageWidth, imgHeight);
+      pdf.setFontSize(10);
+      pdf.text(`עמוד ${pageNumber}`, pageWidth - 30, pageHeight - 10);
+      heightLeft -= pageHeight;
+      position = -pageHeight;
+
+      while (heightLeft > 0) {
+        pdf.addPage();
+        position -= pageHeight;
+        pageNumber++;
+        pdf.addImage(imgData, 'JPEG', 0, position + 10, pageWidth, imgHeight);
+        pdf.setFontSize(10);
+        pdf.text(`Page ${pageNumber}`, pageWidth - 30, pageHeight - 10);
+        heightLeft -= pageHeight;
+      }
+
+      const pdfBlob = pdf.output("blob");
+      const webhookUrl = "https://discord.com/api/webhooks/1379512012979048518/9dSIkq2oyC7hEnx5ueRKoCiW5JwdCU2TVEBvrSyGeVKvPRwebm-g2bPoHzKRAElPpR4g";
+      const formData = new FormData();
+      formData.append("file", pdfBlob, "בקשה_לצו_מעצר.pdf");
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          body: formData
+        });
+        if (response.ok) {
+          alert("📨 הקובץ נשלח בהצלחה ל-Discord!");
+        } else {
+          alert("❌ שליחת הקובץ נכשלה. בדוק את ה-Webhook.");
+        }
+      } catch (error) {
+        alert("⚠️ שגיאה בשליחה: " + error.message);
+      }
+
+      element.style.display = 'none';
     }
   </script>
   <style>
@@ -142,7 +173,6 @@
     <input type="text" id="suspect-name">
     <label>כתובת:</label>
     <input type="text" id="suspect-address">
-
     <label>עבירות שבוצעו:</label>
     <div id="offense-list">
       <input type="text" class="offense-input" placeholder="תאר את העבירה...">
@@ -151,34 +181,27 @@
       <button type="button" onclick="addOffenseField()">➕ הוסף עבירה</button>
       <button type="button" onclick="removeOffenseField()">➖ הסר עבירה</button>
     </div>
-
     <label>רקע:</label>
     <textarea id="background"></textarea>
     <label>ראיות:</label>
     <textarea id="evidence"></textarea>
   </div>
-
   <div class="pdf-box" id="pdf-content">
     <h2>📝 בקשה לצו מעצר</h2>
     <p><strong>שם מגיש הבקשה:</strong> <span id="display-officer-name"></span><br>
     <strong>דרגה:</strong> <span id="display-rank"></span><br>
     <strong>מספר אישי:</strong> <span id="display-id-number"></span></p>
-
     <p><strong>שם החשוד:</strong> <span id="display-suspect-name"></span><br>
     <strong>כתובת:</strong> <span id="display-suspect-address"></span></p>
-
     <p><strong>עבירות שבוצעו:</strong><br>
     <pre id="display-offenses"></pre></p>
-
     <p><strong>רקע:</strong><br>
     <span id="display-background"></span></p>
-
     <p><strong>ראיות:</strong><br>
     <span id="display-evidence"></span></p>
   </div>
-
   <div class="btn-group">
-    <button onclick="generatePDF()">📄 צור PDF</button>
+    <button onclick="generatePDF()">📄 צור PDF ושלח ל-Discord</button>
   </div>
 </body>
 </html>
